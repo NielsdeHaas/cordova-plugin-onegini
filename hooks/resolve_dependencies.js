@@ -228,27 +228,25 @@ function prepareSdkDirectories(context) {
   	directoriesToClean.push(legacyHeadersPathCordova)
   }
   deleteFilesFromDirs(directoriesToClean);
+  fs.mkdirSync(pluginDir + '/src/ios/OneginiSDKiOS');
 }
 
 function deleteFilesFromDirs(directories) {
-  directories.forEach(dir => {
-    fs.readdir(dir, (err, files) => {
-      if (err) {
-        console.error(err);
-        console.error(`An error occurred while reading files from directory: ${dir}`)
+  directories.forEach(dirpath => {
+    const deleteFolderRecursive = function(dirpath) {
+      if (fs.existsSync(dirpath)) {
+        fs.readdirSync(dirpath).forEach((file, index) => {
+          const curPath = path.join(dirpath, file);
+          if (fs.lstatSync(curPath).isDirectory()) { // recurse
+            deleteFolderRecursive(curPath);
+          } else { // delete file
+            fs.unlinkSync(curPath);
+          }
+        });
+        fs.rmdirSync(dirpath);
       }
-
-      for (const file of files) {
-        if (file.endsWith('.a') || file.endsWith('.h') || file.endsWith('.framework')) {
-          fs.unlink(path.join(dir, file), err => {
-            if (err) {
-              console.error(err);
-              console.error(`An error occurred while deleting files from directory: ${dir}`)
-            }
-          });
-        }
-      }
-    });
+    }; 
+  deleteFolderRecursive(dirpath);
   });
 }
 
@@ -259,7 +257,7 @@ function unzipSDK(context) {
     const newDir = path.join(pluginDir, iosSdkPathCordova);
 
     debug('Unzipping SDK to ' + newDir);
-    execSync('tar -xf' + sdkDownloadPath + '/' + libName + ' -C ' + newDir);
+    execSync('tar -xf ' + sdkDownloadPath + '/' + libName + ' -C ' + newDir);
     resolve();
   });
 }
