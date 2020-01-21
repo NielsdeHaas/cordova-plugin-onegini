@@ -9,11 +9,12 @@ A prerequisite for this method is that the user is already enrolled for [regular
 ## `onegini.mobileAuth.push.enroll`
 
 This function enrolls the currently logged in user for mobile authentication.
+- Requires a push token in form of a string
 
 **Example enrollment for a logged in user:**
 
 ```js
-onegini.mobileAuth.push.enroll()
+onegini.mobileAuth.push.enroll(pushToken)
     .then(() => {
       alert("Enrollment success!");
     })

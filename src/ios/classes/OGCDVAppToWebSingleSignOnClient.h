@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-#import "AppDelegate.h"
+#import "CDVPlugin+OGCDV.h"
 @import OneginiSDKiOS;
 
-@interface AppDelegate (OGCDV)
+NS_ASSUME_NONNULL_BEGIN
 
-- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken;
-- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error;
-- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo;
+@interface OGCDVAppToWebSingleSignOnClient : CDVPlugin
+
+- (void)start:(CDVInvokedUrlCommand *)command;
 
 @end
+
+NS_ASSUME_NONNULL_END

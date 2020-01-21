@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Onegini B.V.
+ * Copyright (c) 2017-2019 Onegini B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ const envVariables = {
     ios: 'ONEGINI_CONFIG_IOS_PATH'
   }
 };
+const extractedConfigPlugin = 'cordova-plugin-onegini-extracted-config';
 
 module.exports = function (context) {
   if (process.env.ONEGINI_AUTOCONFIGURE === "false") {
@@ -36,61 +37,107 @@ module.exports = function (context) {
     return;
   }
 
-  const deferral = context.requireCordovaModule('q').defer();
-  const args = [
-    '--cordova',
-    '--app-dir', context.opts.projectRoot
-  ];
-  console.log('Configuring the Onegini SDK');
-  console.log('===========================\n\n');
+  const projectRoot = context.opts.projectRoot;
+  const hasExtractedConfig = hasExtractedConfigFiles(context);
+  const args = ['--cordova', '--app-dir', projectRoot];
+  let platform = context.opts.plugin.platform;
 
-  // deduce the platforms based on whatever in the whitelist is currently installed
-  const platforms = supportedPlatforms.filter(platform => fs.existsSync(path.join(context.opts.projectRoot, "platforms", platform)));
+  // Don't trigger the iOS SDK configurator during the 'after_plugin_install' lifecycle phase as it will be triggered again during the 'after_platform_add'
+  // lifecycle phase.
+  // There is a caveat if 'cordova platform add ios android' is triggered. In this the configurator for iOS can't be suppressed for the iOS platform only.
+  // Hence, this command will execute the SDK configurator twice for the iOS platform. It does not break anything but is merely redundant.
+  if (afterPluginInstallHookTriggeredDuringPlatformInstallOnlyForIos(context)) {
+    return;
+  }
 
-  platforms
-    .map(platform => platform.split('@')[0])
-    .forEach(platform => {
-      console.log(`Configuring the ${platform} platform`);
-      console.log('--------------------------' + new Array(platform.length).join('-') + '\n');
+  // Only trigger the SDK configurator during the 'after_platform_add' lifecycle phase for the iOS platform in case the
+  // cordova command 'cordova platform add ios' is triggered.
+  if (afterPlatformAddHookTriggeredDuringPlatformAddAndIosPlatformInstalled(context, projectRoot)) {
+    // the platform is not provided in the context for the 'cordova platform add <platform>' command so it is set manually.
+    platform = 'ios';
+  }
+  else if (platform === undefined || platform === 'undefined') {
+    return;
+  }
 
-      let platformArgs = args.slice();
-      platformArgs.unshift(platform);
-      platformArgs.push('--config', getConfigFileForPlatform(context.opts.projectRoot, platform));
+  console.log('==============================================' + new Array(platform.length).join('='));
+  console.log(`Configuring the Onegini SDK for the ${platform} platform`);
+  console.log('----------------------------------------------' + new Array(platform.length).join('-') + '\n\n');
 
-      execConfigurator(platformArgs, deferral);
-    });
+  if (supportedPlatforms.indexOf(platform) < -1) {
+    console.log(`${platform} is not supported`);
+    return;
+  }
 
-  return deferral.promise;
+  let platformArgs = args.slice();
+  platformArgs.unshift(platform);
+  const configFile = getConfigFileForPlatform(projectRoot, platform, hasExtractedConfig);
+  platformArgs.push('--config', configFile);
+
+  return execConfigurator(projectRoot, platform, hasExtractedConfig, platformArgs);
 };
 
-function execConfigurator(args, deferral) {
-  const configuratorName = getConfiguratorName();
+function afterPluginInstallHookTriggeredDuringPlatformInstallOnlyForIos(context) {
+  let afterPluginInstallHookTriggered = context.hook === 'after_plugin_install';
+  const platformAddCommandTriggeredOnlyForIos =
+    context.cmdLine.includes('platform add')
+    && context.cmdLine.includes('ios')
+    && !context.cmdLine.includes('android');
 
-  console.log('\nRunning command:');
-  console.log(`${configuratorName} ${args.join(' ')}\n`);
+  return (afterPluginInstallHookTriggered && platformAddCommandTriggeredOnlyForIos)
+}
 
-  const configurator = spawn(configuratorName, args);
+function afterPlatformAddHookTriggeredDuringPlatformAddAndIosPlatformInstalled(context, projectRoot) {
+  const afterPlatformAddHookTriggered = context.hook === 'after_platform_add';
+  const iosPlatformInstalled = fs.existsSync(path.join(projectRoot, 'platforms', 'ios'));
+  const platformAddCommandTriggeredForIos = context.cmdLine.includes('platform add') && context.cmdLine.includes('ios');
 
-  configurator.stdout.on('data', (data) => {
-    process.stdout.write(data);
-  });
+  return (afterPlatformAddHookTriggered && iosPlatformInstalled && platformAddCommandTriggeredForIos);
+}
 
-  configurator.stderr.on('data', (data) => {
-    process.stdout.write(data);
-  });
+function executeCommand(command, args) {
+  return new Promise(function (resolve, reject) {
+    console.log('\nRunning command:');
+    console.log(`${command} ${args.join(' ')}\n`);
 
-  configurator.on('close', (code) => {
-    if (code === 0) {
-      deferral.resolve();
-    } else {
-      deferral.reject('Could not configure the Onegini SDK with your configuration');
-    }
+    const configurator = spawn(command, args);
+
+    configurator.stdout.on('data', (data) => {
+      process.stdout.write(data);
+    });
+
+    configurator.stderr.on('data', (data) => {
+      process.stdout.write(data);
+    });
+
+    configurator.on('close', (code) => {
+      if (code === 0) {
+        resolve("finished");
+      }
+      else {
+        reject("failed");
+      }
+    });
   });
 }
 
-function getConfigFileForPlatform(projectRoot, platform) {
+function execConfigurator(projectRoot, platform, hasExtractedConfig, args) {
+  const configuratorName = getConfiguratorName(projectRoot, platform, hasExtractedConfig);
+  return executeCommand(configuratorName, args)
+    .then(copyArtifactoryCredentials(projectRoot, platform, hasExtractedConfig))
+    .then(value => {
+      console.log('==============================================' + new Array(platform.length).join('='));
+      return value;
+    }, reason => {
+      console.log('==============================================' + new Array(platform.length).join('=') + '\n');
+      throw new Error('Could not configure the Onegini SDK with your configuration');
+    });
+}
+
+function getConfigFileForPlatform(projectRoot, platform, hasExtractedConfig) {
   const environmentVar = envVariables.configFiles[platform];
   const environmentLocation = process.env[environmentVar];
+  const extractedConfigPluginLocation = `${projectRoot}/plugins/${extractedConfigPlugin}/onegini-config-${platform}.zip`;
   const defaultLocation = `${projectRoot}/onegini-config-${platform}.zip`;
 
   if (environmentLocation) {
@@ -98,13 +145,19 @@ function getConfigFileForPlatform(projectRoot, platform) {
     return environmentLocation;
   }
 
+  if (hasExtractedConfig) {
+    console.log(`Using Token Server config zip from '${extractedConfigPluginLocation}'`);
+    return extractedConfigPluginLocation;
+  }
+
   console.log(`Using default Token Server config zip: '${defaultLocation}'`);
   return defaultLocation;
 }
 
-function getConfiguratorName() {
+function getConfiguratorName(projectRoot, platform, hasExtractedConfig) {
   const environmentVar = envVariables.configuratorName;
   const environmentName = process.env[environmentVar];
+  const extractedName = `${projectRoot}/plugins/${extractedConfigPlugin}/onegini-sdk-configurator-${platform}`;
   const defaultName = 'onegini-sdk-configurator';
 
   if (environmentName) {
@@ -112,6 +165,34 @@ function getConfiguratorName() {
     return environmentName;
   }
 
+  if (hasExtractedConfig) {
+    console.log(`Using SDK Configurator executable in '${extractedName}'`);
+    return extractedName;
+  }
+
   console.log('Using SDK Configurator from $PATH');
   return defaultName;
+}
+
+function copyArtifactoryCredentials(projectRoot, platform, hasExtractedConfig) {
+  return new Promise(function (resolve, reject) {
+    if (platform === 'android' && hasExtractedConfig) {
+      const filePath = `${projectRoot}/plugins/${extractedConfigPlugin}/artifactory.properties`;
+      const destinationFilePath = path.join(projectRoot, 'platforms/android/artifactory.properties');
+      const destDir = path.dirname(destinationFilePath);
+
+      if (fs.existsSync(filePath) && fs.existsSync(destDir)) {
+        console.log(`Copying '${filePath}' into '${destDir}'`);
+        const stream = fs.createReadStream(filePath).pipe(fs.createWriteStream(destinationFilePath));
+        stream.on('end', () => resolve("finished"));
+        stream.on('error', (error) => reject("failed"));
+        return;
+      }
+    }
+    resolve("Skipping artifactory config");
+  });
+}
+
+function hasExtractedConfigFiles(context) {
+  return context.opts.cordova.plugins.indexOf(extractedConfigPlugin) > -1;
 }

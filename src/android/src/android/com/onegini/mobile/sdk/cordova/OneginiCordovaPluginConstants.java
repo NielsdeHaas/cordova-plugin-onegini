@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Onegini B.V.
+ * Copyright (c) 2017-2019 Onegini B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,8 @@ public interface OneginiCordovaPluginConstants {
   // Error descriptions
   String ERROR_DESCRIPTION_PLUGIN_INTERNAL_ERROR = "Onegini: Internal plugin error";
   String ERROR_DESCRIPTION_ILLEGAL_ARGUMENT_PROFILE = "Onegini: Argument provided is not a valid profile object";
+  String ERROR_DESCRIPTION_ILLEGAL_ARGUMENT_FCM_KEY = "Onegini: Argument provided is not a valid FCM registration key";
+  String ERROR_DESCRIPTION_ILLEGAL_ARGUMENT_PUSH_MESSAGE = "Onegini: Argument provided is not a valid Onegini push message";
 
   String ERROR_DESCRIPTION_PROFILE_NOT_REGISTERED = "Onegini: No registered user found.";
   String ERROR_DESCRIPTION_NO_USER_AUTHENTICATED = "Onegini: No user authenticated.";

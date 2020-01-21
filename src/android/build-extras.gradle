@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018 Onegini B.V.
+ * Copyright (c) 2017-2019 Onegini B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,18 +35,7 @@ allprojects {
     maven {
       url "https://repo.onegini.com/artifactory/onegini-sdk"
       credentials {
-        def artifactoryUser
-        def artifactoryPassword
-        if (project.hasProperty('artifactory_user')) {
-          artifactoryUser = artifactory_user
-        } else {
-          artifactoryUser = System.env.ARTIFACTORY_USER
-        }
-        if (project.hasProperty('artifactory_password')) {
-          artifactoryPassword = artifactory_password
-        } else {
-          artifactoryPassword = System.env.ARTIFACTORY_PASSWORD
-        }
+        def (artifactoryUser, artifactoryPassword) = getArtifactoryCredentials()
         if (artifactoryUser?.trim() && artifactoryPassword?.trim()) {
           username artifactoryUser
           password artifactoryPassword
@@ -64,16 +53,9 @@ allprojects {
 dependencies {
   // TODO Move to release version before plugin release
   // Onegini SDK
-  api('com.onegini.mobile.sdk.android:onegini-sdk:9.4.0@aar') {
+  api('com.onegini.mobile.sdk.android:onegini-sdk:9.7.0@aar') {
     transitive = true
   }
-
-  // Google Play Services availability check
-  implementation 'com.google.android.gms:play-services-base:16.0.1'
-  //Firebase Cloud Messaging (FCM)
-  implementation "com.google.firebase:firebase-messaging:17.3.4"
-
-  implementation 'com.android.support:appcompat-v7:26.1.0'
 }
 
 afterEvaluate {
@@ -92,4 +74,20 @@ android {
   defaultConfig {
     multiDexEnabled true
   }
+}
+
+def getArtifactoryCredentials() {
+  if (project.hasProperty('artifactory_user') && project.hasProperty('artifactory_password')) {
+    return [artifactory_user, artifactory_password]
+  } else if (System.env.ARTIFACTORY_USER && System.env.ARTIFACTORY_PASSWORD) {
+    return [System.env.ARTIFACTORY_USER, System.env.ARTIFACTORY_PASSWORD]
+  } else {
+    def artifactoryFile = file("${project.rootDir}/artifactory.properties")
+    if (artifactoryFile.exists()) {
+      def props = new Properties()
+      artifactoryFile.withInputStream { props.load(it) }
+      return [props.getProperty("artifactoryUser"), props.getProperty("artifactoryPassword")]
+    }
+  }
+  return ["", ""]
 }

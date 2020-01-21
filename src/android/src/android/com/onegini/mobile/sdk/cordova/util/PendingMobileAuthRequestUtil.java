@@ -34,7 +34,7 @@ public class PendingMobileAuthRequestUtil {
 
   private static final Gson gson = new Gson();
 
-  public static OneginiMobileAuthWithPushRequest pendingMobileAuthRequestFromJSON(final String json) throws JSONException {
+  public static OneginiMobileAuthWithPushRequest pendingMobileAuthRequestFromJSON(final String json) {
     return gson.fromJson(json, OneginiMobileAuthWithPushRequest.class);
   }
 

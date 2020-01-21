@@ -20,14 +20,10 @@
 
 @interface OGCDVPushMobileAuthClient : CDVPlugin
 
-@property (nonatomic, copy) NSString *enrollCallbackId;
 @property (nonatomic, copy) NSData *deviceToken;
 
 - (void)isEnrolled:(CDVInvokedUrlCommand *)command;
 - (void)enroll:(CDVInvokedUrlCommand *)command;
-
-- (void)registerForRemoteNotifications;
-- (void)didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken;
-- (void)didFailToRegisterForRemoteNotificationsWithError:(NSError *)error;
+- (void)handle:(CDVInvokedUrlCommand *)command;
 
 @end

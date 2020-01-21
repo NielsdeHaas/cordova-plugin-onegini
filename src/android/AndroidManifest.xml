@@ -17,7 +17,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="com.onegini">
     <application
-        android:allowBackup="false"
-        android:icon="@android:color/transparent">
+        android:allowBackup="false">
     </application>
 </manifest>

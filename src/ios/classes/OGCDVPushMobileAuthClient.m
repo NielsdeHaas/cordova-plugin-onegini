@@ -17,9 +17,10 @@
 #import "OGCDVPushMobileAuthClient.h"
 #import "OGCDVConstants.h"
 #import "OGCDVUserClientHelper.h"
+#import "NSString+OGCDVHex.h"
+#import "OGCDVPushMobileAuthRequestClient.h"
 
-@implementation OGCDVPushMobileAuthClient {
-}
+@implementation OGCDVPushMobileAuthClient
 
 - (void)isEnrolled:(CDVInvokedUrlCommand *)command
 {
@@ -45,49 +46,23 @@
             [self sendErrorResultForCallbackId:command.callbackId withErrorCode:OGCDVPluginErrCodeNoUserAuthenticated andMessage:OGCDVPluginErrDescriptionNoUserAuthenticated];
             return;
         }
-
-        self.enrollCallbackId = command.callbackId;
-
-        [self registerForRemoteNotifications];
+        NSData *deviceToken = [command.arguments.firstObject ogcdv_dataFromHexString];
+        [[ONGUserClient sharedInstance] enrollForPushMobileAuthWithDeviceToken:deviceToken
+                                                                    completion:^(BOOL enrolled, NSError *_Nullable error) {
+                                                                        if (error != nil || !enrolled) {
+                                                                            [self sendErrorResultForCallbackId:command.callbackId withError:error];
+                                                                        } else {
+                                                                            [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
+                                                                        }
+                                                                    }];
     }];
 }
 
-- (void)doEnroll
+- (void)handle:(CDVInvokedUrlCommand *)command
 {
-    [[ONGUserClient sharedInstance] enrollForPushMobileAuthWithDeviceToken:self.deviceToken
-                                                                completion:^(BOOL enrolled, NSError *_Nullable error) {
-                                                                    if (error != nil || !enrolled) {
-                                                                        [self sendErrorResultForCallbackId:self.enrollCallbackId withError:error];
-                                                                    } else {
-                                                                        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:self.enrollCallbackId];
-                                                                    }
-                                                                    self.enrollCallbackId = nil;
-                                                                }];
-}
-
-- (void)registerForRemoteNotifications
-{
-    if ([[UIApplication sharedApplication] respondsToSelector:@selector(registerUserNotificationSettings:)]) {
-#ifdef __IPHONE_8_0
-        UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:(UIUserNotificationTypeAlert | UIUserNotificationTypeBadge | UIUserNotificationTypeSound) categories:nil];
-        [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
-        [[UIApplication sharedApplication] registerForRemoteNotifications];
-#endif
-    } else {
-        UIRemoteNotificationType myTypes = UIRemoteNotificationTypeBadge | UIRemoteNotificationTypeAlert | UIRemoteNotificationTypeSound;
-        [[UIApplication sharedApplication] registerForRemoteNotificationTypes:myTypes];
-    }
-}
-
-- (void)didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
-{
-    self.deviceToken = deviceToken;
-    [self doEnroll];
-}
-
-- (void)didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
-{
-    [self sendErrorResultForCallbackId:self.enrollCallbackId withError:error];
+    NSDictionary *options = command.arguments[0];
+    ONGPendingMobileAuthRequest *mobileAuth = [[ONGUserClient sharedInstance] pendingMobileAuthRequestFromUserInfo:options];
+    [[ONGUserClient sharedInstance] handlePendingPushMobileAuthRequest:mobileAuth delegate:[OGCDVPushMobileAuthRequestClient sharedInstance]];
 }
 
 @end

@@ -8,59 +8,44 @@ Two factor authentication can be implemented using APNs & FCM push notifications
 feature to allow users to confirm their transactions. Confirmation can be done using simple Accept button, PIN or a Fingerprint  authenticator. All
 transaction information is encrypted and no sensitive information is sent through either APNs or FCM.
 
-## Setup and requirements
-
-The setup and requirements to enable mobile authentication with push differ per platform. For Android devices, the medium used to send push messages is
-**Firebase Cloud Messaging (FCM)**. For iOS devices, the **Apple Push Notification service (APNs)** is used. You will need a valid `google-services.json` and/or
-APNs setup to receive push notifications in the Onegini Cordova Plugin.
-
-### Android
-
-Since FCM requires a valid `google-services.json` and not everyone might want to use the push mobile authentication feature this functionality is placed
-in it's own Cordova plugin, the [Onegini FCM plugin](https://github.com/Onegini/cordova-plugin-onegini-fcm). To enable push mobile authentication you must add
-the `cordova-plugin-onegini-fcm` plugin to your project:
-
-```bash
-cordova plugin add cordova-plugin-onegini-fcm
-```
-
-This plugin will enable your application for FCM and trigger the `GoogleServices` Gradle plugin during the project build phase.
-
-To add your `google-services.json` to the application project, add your `google-services.json` file to the root of your Cordova project. This file can be
-obtained from the [Firebase console](https://console.firebase.google.com) The FCM plugin contains a hook that is triggered on `after_prepare` which will copy
-your `google-services.json` to the correct location in the generated Android project.
-
-### iOS
-
-For iOS to receive push notifications. You will need to open `platforms/ios/MyApp.xcodeproj` in Xcode and configure APNs. Make sure to enable
-`Push Notifications` under your App's Capabilities.
-
-### Onegini FCM plugin version compatibility
-
-To check which Onegini FCM plugin and Onegini plugin are compatible with each other check the table below.
-
-| Onegini plugin Version (cordova-plugin-onegini) | Onegini FCM plugin version (cordova-plugin-onegini-fcm)| Remark
-|-------------------------------------------------|--------------------------------------------------------| -------------------
-| < 4.0.0                                         | n.a.                                                   | Onegini Cordova plugin versions before 4.0.0 still depend on GCM.
-| 4.0.0 - 5.1.0                                   | 1.0.0 - 1.1.x                                          | n.a.
-| &ge; 5.2.0                                      | 1.2.x                                                  | n.a.
-
 ## Enrollment
 
-Once push notifications have been set up, the Onegini Cordova plugin requires an authenticated or logged in user to enroll for mobile authentication with push.
+To enroll for push first you need to obtain the device token from FCM/APNS. You could write this logic by yourself or use a plugin like https://github.com/phonegap/phonegap-plugin-push
+to do that for you. Once you obtain the deviceToken, the Onegini Cordova plugin requires an authenticated or logged in user to enroll for mobile authentication with push. 
 The user can be enrolled on only one application instance at a time. If the user has multiple mobile devices on which the application is installed, the user
-can only enroll for mobile authentication with push on one of these devices.
+can only enroll for mobile authentication with push on one of these devices. Enrollment is done by calling `onegini.mobileAuth.push.enroll()` function.
 
-**Example code to enroll an authenticated user for mobile authentication with push:**
+You also need to implement handling of the notification event received by the system. After receiving the notification, you should verify if it can be handled by Onegini Cordova Plugin. 
+You can do it by calling `onegini.mobileAuth.push.canHandlePushMessage()` function. If the function returns `true` you can pass it the plugin by calling `onegini.mobileAuth.push.handlePushMessage()` function. Both methods expect you to pass a JSON object as the argument.
+
+**Example code to enroll an authenticated user for mobile authentication with push using PhonegapPluginPush:**
 
 ```js
-onegini.mobileAuth.push.enroll()
+const push = PushNotification.init({android: {},
+                                        ios: {alert: "true", badge: "true", sound: "true"}});
+push.on('registration', (data) => {
+  onegini.mobileAuth.push.enroll(data)
     .then(() => {
       alert("Enrollment success!");
     })
     .catch((err) => {
       alert("Enrollment error!\n\n" + err.description);
     });
+});
+push.on('notification', (data) => {
+  if (onegini.mobileAuth.push.canHandlePushMessage(data.additionalData)) { 
+    onegini.mobileAuth.push.handlePushMessage(data.additionalData)
+      .catch((err) => alert('Push message error: ' + err.description));
+  } else {
+    var message = (data.title ? data.title + " " : "") + (data.message ? data.message : "");
+    if (message.length > 0) {
+      alert(message);
+    }
+  }
+});
+pusher.on('error', (e) => {
+  alert('Push message error: ' + e.message);
+});
 ```
 
 If you want to use mobile fingerprint authentication, you will need to register the fingerprint authenticator for the relevant user (see
@@ -105,13 +90,13 @@ Fetching pending mobile authentication requests can be performed using the follo
 
 ```js
 onegini.mobileAuth.push.getPendingRequests()
-          .then((result) => {
-            this.pushRequests = result;
-          })
-          .catch((err) => {
-            console.error('Error while fetching pending push requests:', err);
-            this.status = 'Could not fetch pending push requests';
-          });
+  .then((result) => {
+    this.pushRequests = result;
+  })
+  .catch((err) => {
+    console.error('Error while fetching pending push requests:', err);
+    this.status = 'Could not fetch pending push requests';
+  });
 ```
 
 From the fetched obejcts you can get following information about mobile authentication request:

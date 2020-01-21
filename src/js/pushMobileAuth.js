@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Onegini B.V.
+ * Copyright (c) 2017-2019 Onegini B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,22 @@ module.exports = (function () {
     return utils.promiseOrCallbackExec('OneginiPushMobileAuthClient', 'isEnrolled', options, successCb, failureCb);
   }
 
-  function enroll(successCb, failureCb) {
-    return utils.promiseOrCallbackExec('OneginiPushMobileAuthClient', 'enroll', [], successCb, failureCb);
+  function enroll(options, successCb, failureCb) {
+    return utils.promiseOrCallbackExec('OneginiPushMobileAuthClient', 'enroll', options, successCb, failureCb);
+  }
+
+  function canHandlePushMessage(pushData) {
+    if (pushData) {
+      var content = pushData.content ? pushData.content : pushData;
+      var transactionId = content.og_transaction_id;
+      return (typeof transactionId === "string" && transactionId.length > 0);
+    }
+    return false;
+  }
+
+  function handlePushMessage(options, successCb, failureCb) {
+    var content = options.content ? options.content : options
+    return utils.promiseOrCallbackExec('OneginiPushMobileAuthClient', 'handle', content, successCb, failureCb);
   }
 
   function getPendingRequests(successCb, failureCb) {
@@ -116,6 +130,8 @@ module.exports = (function () {
   return {
     isUserEnrolled: isUserEnrolled,
     enroll: enroll,
+    canHandlePushMessage: canHandlePushMessage,
+    handlePushMessage: handlePushMessage,
     getPendingRequests: getPendingRequests,
     handlePendingRequest: handlePendingRequest,
     on: on

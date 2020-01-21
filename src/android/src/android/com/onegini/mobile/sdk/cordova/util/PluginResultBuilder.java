@@ -37,6 +37,7 @@ import com.onegini.mobile.sdk.android.model.OneginiClientConfigModel;
 import com.onegini.mobile.sdk.android.model.entity.CustomInfo;
 import com.onegini.mobile.sdk.android.model.entity.OneginiMobileAuthenticationRequest;
 import com.onegini.mobile.sdk.android.model.entity.UserProfile;
+import com.onegini.mobile.sdk.android.model.OneginiAppToWebSingleSignOn;
 
 public class PluginResultBuilder {
 
@@ -192,6 +193,18 @@ public class PluginResultBuilder {
     if (identityProviderId != null) {
       try {
         payload.put("identityProviderId", identityProviderId);
+      } catch (JSONException e) {
+        handleException(e);
+      }
+    }
+    return this;
+  }
+
+  public PluginResultBuilder withAppToWebSingleSignOn(final OneginiAppToWebSingleSignOn response) {
+    if (response != null) {
+      try {
+        payload.put("redirectUri", response.getRedirectUrl());
+        payload.put("token", response.getToken());
       } catch (JSONException e) {
         handleException(e);
       }

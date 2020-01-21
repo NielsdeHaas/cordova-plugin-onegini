@@ -292,6 +292,13 @@ module.exports = (function () {
     return utils.promiseOrCallbackExec('OneginiIdentityProvidersClient', 'getIdentityProviders', [], successCb, failureCb);
   }
 
+  function getAppToWebSingleSignOn(options, successCb, failureCb) {
+    if (!options) {
+      throw new TypeError("Onegini: missing 'targetUri' argument for App To Web Single Sign-On");
+    }
+    return utils.promiseOrCallbackExec("OneginiAppToWebSingleSignOnClient", 'start', options, successCb, failureCb);
+  }
+
   return {
     authenticate: authenticate,
     authenticateImplicitly: authenticateImplicitly,
@@ -305,6 +312,7 @@ module.exports = (function () {
     getImplicitlyAuthenticatedUserProfile: getImplicitlyAuthenticatedUserProfile,
     logout: logout,
     validatePinWithPolicy: validatePinWithPolicy,
-    getIdentityProviders: getIdentityProviders
+    getIdentityProviders: getIdentityProviders,
+    getAppToWebSingleSignOn: getAppToWebSingleSignOn
   };
 })();

@@ -1,7 +1,7 @@
 {
   "presets": [
     [
-      "env",
+      "@babel/preset-env",
       {
         "debug": false,
         "modules": "commonjs",
@@ -17,10 +17,10 @@
   ],
   "plugins": [
     [
-      "transform-runtime",
+      "@babel/transform-runtime",
       {
         "helpers": true,
-        "polyfill": true,
+        "corejs": '2',
         "regenerator": false
       }
     ]

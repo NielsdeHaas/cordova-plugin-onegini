@@ -142,7 +142,6 @@ module.exports = (function (XMLHttpRequest, TextDecoder, CustomEvent) {
   }
 
   function sliceBuffer(buffer) {
-    const ArrrayBuffer = require('core-js/fn/typed/array-buffer');
     buffer = ArrayBuffer.prototype.slice.call(buffer, [0, buffer.length]);
   }
 

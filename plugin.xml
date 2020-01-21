@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2017 Onegini B.V.
+    Copyright (c) 2017-2019 Onegini B.V.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,12 +16,18 @@
 -->
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android"
     id="cordova-plugin-onegini"
-    version="5.3.1-SNAPSHOT">
+    version="6.2.0">
   <name>OneginiCordovaPlugin</name>
   <description>Onegini Cordova Plugin</description>
 
   <hook type="before_plugin_install" src="hooks/resolve_dependencies.js"/>
   <hook type="after_plugin_install" src="hooks/configure_sdk.js"/>
+
+  <!--
+  Due to the fact that Cordova modifies the Xcodeproj during the platform add phase we need to trigger the configurator hook again for iOS.
+  Explicit platform filtering is done in the hook code.
+  -->
+  <hook type="after_platform_add" src="hooks/configure_sdk.js"/>
 
   <js-module src="dist/onegini.js" name="onegini">
     <clobbers target="onegini"/>
@@ -80,14 +86,17 @@
       <feature name="OneginiIdentityProvidersClient">
         <param name="ios-package" value="OGCDVIdentityProvidersClient"/>
       </feature>
+      <feature name="OneginiAppToWebSingleSignOnClient">
+        <param name="ios-package" value="OGCDVAppToWebSingleSignOnClient"/>
+      </feature>
     </config-file>
 
     <header-file src="src/ios/classes/Reachability.h"/>
     <source-file src="src/ios/classes/Reachability.m"/>
     <header-file src="src/ios/classes/OGCDVConstants.h"/>
     <source-file src="src/ios/classes/OGCDVConstants.m"/>
-    <header-file src="src/ios/classes/AppDelegate+OGCDV.h"/>
-    <source-file src="src/ios/classes/AppDelegate+OGCDV.m"/>
+    <header-file src="src/ios/classes/NSString+OGCDVHex.h"/>
+    <source-file src="src/ios/classes/NSString+OGCDVHex.m"/>
     <header-file src="src/ios/classes/CDVPlugin+OGCDV.h"/>
     <source-file src="src/ios/classes/CDVPlugin+OGCDV.m"/>
     <header-file src="src/ios/classes/OGCDVClient.h"/>
@@ -136,6 +145,8 @@
     <source-file src="src/ios/classes/OGCDVPendingPushMobileAuthRequestClientHelper.m"/>
     <header-file src="src/ios/classes/ONGPendingMobileAuthRequest+IntenalSetters.h"/>
     <source-file src="src/ios/classes/ONGPendingMobileAuthRequest+IntenalSetters.m"/>
+    <header-file src="src/ios/classes/OGCDVAppToWebSingleSignOnClient.h"/>
+    <source-file src="src/ios/classes/OGCDVAppToWebSingleSignOnClient.m"/>
 
     <!-- Safari Services for SFSafariViewController -->
     <framework src="SafariServices.framework" weak="true"/>
@@ -217,6 +228,10 @@
         <param name="android-package" value="com.onegini.mobile.sdk.cordova.client.IdentityProvidersClient"/>
         <param name="onload" value="false"/>
       </feature>
+      <feature name="OneginiAppToWebSingleSignOnClient">
+        <param name="android-package" value="com.onegini.mobile.sdk.cordova.client.AppToWebSingleSignOnClient"/>
+        <param name="onload" value="false"/>
+      </feature>
     </config-file>
     <config-file target="AndroidManifest.xml" parent="/manifest">
       <uses-permission android:name="android.permission.INTERNET"/>
@@ -276,16 +291,8 @@
         target-dir="src/com/onegini/mobile/sdk/cordova/client"/>
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/client/IdentityProvidersClient.java"
         target-dir="src/com/onegini/mobile/sdk/cordova/client"/>
-
-    <!-- fcm -->
-    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/fcm/FcmListenerService.java"
-        target-dir="src/com/onegini/mobile/sdk/cordova/fcm"/>
-    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/fcm/FcmStorage.java"
-        target-dir="src/com/onegini/mobile/sdk/cordova/fcm"/>
-    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/fcm/FcmRegistrationService.java"
-        target-dir="src/com/onegini/mobile/sdk/cordova/fcm"/>
-    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/fcm/NotificationHelper.java"
-        target-dir="src/com/onegini/mobile/sdk/cordova/fcm"/>
+    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/client/AppToWebSingleSignOnClient.java"
+        target-dir="src/com/onegini/mobile/sdk/cordova/client"/>
 
     <!-- util -->
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/util/PluginResultBuilder.java"
@@ -297,8 +304,6 @@
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/util/AuthenticatorUtil.java"
         target-dir="src/com/onegini/mobile/sdk/cordova/util"/>
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/util/OkHttpResponseUtil.java"
-        target-dir="src/com/onegini/mobile/sdk/cordova/util"/>
-    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/util/AppLifecycleUtil.java"
         target-dir="src/com/onegini/mobile/sdk/cordova/util"/>
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/util/PendingMobileAuthRequestUtil.java"
         target-dir="src/com/onegini/mobile/sdk/cordova/util"/>
@@ -348,6 +353,8 @@
         target-dir="src/com/onegini/mobile/sdk/cordova/handler/"/>
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/handler/PendingMobileAuthWithPushRequestsHandler.java"
         target-dir="src/com/onegini/mobile/sdk/cordova/handler/"/>
+    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/handler/AppToWebSingleSignOnHandler.java"
+        target-dir="src/com/onegini/mobile/sdk/cordova/handler/"/>
 
     <!-- mobileAuthentication -->
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/mobileAuthentication/Callback.java"
@@ -361,8 +368,6 @@
 
     <!-- model -->
     <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/model/AuthMethod.java"
-        target-dir="src/com/onegini/mobile/sdk/cordova/model/"/>
-    <source-file src="src/android/src/android/com/onegini/mobile/sdk/cordova/model/NotificationId.java"
         target-dir="src/com/onegini/mobile/sdk/cordova/model/"/>
 
     <!-- custom registration -->

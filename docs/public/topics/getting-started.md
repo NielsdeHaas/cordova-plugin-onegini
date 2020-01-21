@@ -45,7 +45,7 @@ More details about platform configuration can be found in the [Configuration gui
 
 For the Cordova plugin to be able to configure your Cordova app for use with your Token Server, you will need to install the Onegini SDK Configurator.
 
-Download the latest 3.x release for your platform from the [release page](https://github.com/Onegini/onegini-sdk-configurator/releases) and extract the zip file.
+Download the latest release for your platform from the [release page](https://github.com/Onegini/onegini-sdk-configurator/releases) and extract the zip file.
 
 Point the Cordova Plugin to the location you stored the configurator by setting the `ONEGINI_SDK_CONFIGURATOR_PATH` environment variable.
 ```bash
